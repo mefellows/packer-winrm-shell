@@ -1,0 +1,45 @@
+{
+  "provisioners": {
+    "winrm-shell": "/Users/mfellows/development/public/packer-winrm-shell/provisioner/winrm-shell"
+  },
+  "builders": [
+    {
+      "type": "virtualbox-ovf",
+      "source_path": "/Users/mfellows/Downloads/packer-output-updates/virtualbox-win-2008-base.ovf",
+      "headless": false,
+      "guest_additions_mode": "disable",
+      "boot_wait": "1m",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "5m",
+      "shutdown_command": "shutdown /s /t 10 /f /d p:4:1 /c \"Packer Shutdown\"",
+      "vboxmanage": [
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--memory",
+          "2048"
+        ],
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--vram",
+          "64"
+        ],
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--cpus",
+          "2"
+        ]
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+   		"type": "winrm-shell",
+		"inline": ["whoami"]
+	}
+  ]
+}
+
