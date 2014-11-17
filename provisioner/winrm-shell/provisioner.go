@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/mitchellh/packer/common"
 	"github.com/mitchellh/packer/packer"
+	"github.com/sneal/go-winrm"
 	"log"
 	"os"
 	"strings"
@@ -17,6 +18,18 @@ const DefaultRemotePath = "/tmp/script.sh"
 
 type config struct {
 	common.PackerConfig `mapstructure:",squash"`
+
+	// Hostname to connect to
+	Hostname string
+
+	// Port to connect to
+	Port int
+
+	// WinRM Username
+	Username string
+
+	// WinRM password
+	Password string
 
 	// If true, the script contains binary and line endings will not be
 	// converted from Windows to Unix-style.
@@ -89,8 +102,24 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 		p.config.Inline = nil
 	}
 
+	if p.config.Port == 0 {
+		p.config.Port = 5985
+	}
+
+	if p.config.Hostname == "" {
+		p.config.Hostname = "localhost"
+	}
+
+	if p.config.Username == "" {
+		p.config.Username = "vagrant"
+	}
+
+	if p.config.Password == "" {
+		p.config.Password = "vagrant"
+	}
+
 	if p.config.InlineShebang == "" {
-		p.config.InlineShebang = "/bin/sh"
+		p.config.InlineShebang = "cmd /c powershell -Command"
 	}
 
 	if p.config.RawStartRetryTimeout == "" {
@@ -192,6 +221,31 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 
 func (p *Provisioner) Provision(ui packer.Ui, comm packer.Communicator) error {
 	ui.Say(fmt.Sprintf("Provisioning with winrm shell script"))
+
+	// Create a WinRM Shell and start communicating
+	// with remote host
+	var client = winrm.NewClient(p.config.Hostname, p.config.Username, p.config.Password)
+	shell, err := client.CreateShell()
+	if err != nil {
+		return err
+	}
+
+	var cmd *winrm.Command
+	cmd, err = shell.Execute(winrm.Powershell("Get-ExecutionPolicy"), os.Stdout, os.Stderr)
+	if err != nil {
+		return err
+	}
+	cmd, err = shell.Execute(winrm.Powershell("Write-Host 'hello from PS'"), os.Stdout, os.Stderr)
+	if err != nil {
+		return err
+	}
+
+	cmd.Wait()
+
+	if cmd.ExitCode() != 0 {
+		fmt.Println("Command failed")
+	}
+
 	// scripts := make([]string, len(p.config.Scripts))
 	// copy(scripts, p.config.Scripts)
 

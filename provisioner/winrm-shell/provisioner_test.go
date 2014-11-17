@@ -33,6 +33,26 @@ func TestProvisionerPrepare_Defaults(t *testing.T) {
 	if p.config.RemotePath != DefaultRemotePath {
 		t.Errorf("unexpected remote path: %s", p.config.RemotePath)
 	}
+
+	if p.config.Password != "vagrant" {
+		t.Error("Password should default to 'vagrant'")
+	}
+
+	if p.config.Username != "vagrant" {
+		t.Error("Username should default to 'vagrant'")
+	}
+
+	if p.config.Hostname != "localhost" {
+		t.Error("Hostname should default to 'localhost'")
+	}
+
+	if p.config.Port != 5985 {
+		t.Error("Port should default to '5985'")
+	}
+}
+
+func TestProvisionerPrepare_Config(t *testing.T) {
+
 }
 
 func TestProvisionerPrepare_InlineShebang(t *testing.T) {
@@ -45,7 +65,7 @@ func TestProvisionerPrepare_InlineShebang(t *testing.T) {
 		t.Fatalf("should not have error: %s", err)
 	}
 
-	if p.config.InlineShebang != "/bin/sh" {
+	if p.config.InlineShebang != "cmd /c powershell -Command" {
 		t.Fatalf("bad value: %s", p.config.InlineShebang)
 	}
 
@@ -203,17 +223,27 @@ func TestProvisionerPrepare_EnvironmentVars(t *testing.T) {
 func TestProvisionerQuote_EnvironmentVars(t *testing.T) {
 	config := testConfig()
 
-	config["environment_vars"] = []string{"keyone=valueone", "keytwo=value\ntwo"}
+	config["environment_vars"] = []string{"keyone=valueone", "keytwo=value\ntwo", "keythree='valuethree'", "keyfour='value\nfour'"}
 	p := new(Provisioner)
 	p.Prepare(config)
 
-	expectedValue := "keyone='valueone'"
+	expectedValue := "keyone=valueone"
 	if p.config.Vars[0] != expectedValue {
 		t.Fatalf("%s should be equal to %s", p.config.Vars[0], expectedValue)
 	}
 
-	expectedValue = "keytwo='value\ntwo'"
+	expectedValue = "keytwo=value\ntwo"
 	if p.config.Vars[1] != expectedValue {
 		t.Fatalf("%s should be equal to %s", p.config.Vars[1], expectedValue)
+	}
+
+	expectedValue = "keythree='valuethree'"
+	if p.config.Vars[2] != expectedValue {
+		t.Fatalf("%s should be equal to %s", p.config.Vars[2], expectedValue)
+	}
+
+	expectedValue = "keyfour='value\nfour'"
+	if p.config.Vars[3] != expectedValue {
+		t.Fatalf("%s should be equal to %s", p.config.Vars[3], expectedValue)
 	}
 }
