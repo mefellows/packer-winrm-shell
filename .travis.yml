@@ -5,11 +5,14 @@ go:
 - tip
 install:
 - make updatedeps
-- go get code.google.com/p/go.tools/cmd/cover
+before_install:
+- go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
+- go get golang.org/x/tools/cmd/cover
+- go get code.google.com/p/go.tools/cmd/cover
 script:
 - go build
-- go test -v -covermode=count $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+- $HOME/gopath/bin/goveralls -repotoken $COVERALLS_TOKEN
 matrix:
   allow_failures:
   - go: tip
