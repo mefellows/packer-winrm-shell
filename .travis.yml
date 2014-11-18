@@ -1,16 +1,19 @@
 language: go
-
 go:
-  - 1.2
-  - 1.3
-  - tip
-
-install: 
-  - make updatedeps
+- 1.2
+- 1.3
+- tip
+install:
+- make updatedeps
+- go get code.google.com/p/go.tools/cmd/cover
+- go get github.com/mattn/goveralls
 script:
- - go build
- - go test -race ./...
-
+- go build
+- go test -v -covermode=count -coverprofile=coverage.out $HOME/gopath/bin/goveralls
+  -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 matrix:
   allow_failures:
-    - go: tip
+  - go: tip
+env:
+  global:
+    secure: iw4gkKt+5WC9ttA+pRdKPZlyokFZZvXSU0BVNiiPgGAGe6F5Qc3dUL7k0sKaTrCpIVcVSmUyAykinO8AlJ1WQ39CPUfN7AbnarCtGpjKut6vdVxBoH1k2xIpYHGBXCUxKHu5XxlDogOwYAhtF9iBMy7Ddw1TVYX+uoS4qObpewY=
