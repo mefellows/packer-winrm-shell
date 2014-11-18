@@ -10,12 +10,14 @@ before_install:
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
 - go get code.google.com/p/go.tools/cmd/cover
+- go get github.com/modocache/gover
 script:
 - go build
-- $HOME/gopath/bin/goveralls -repotoken $COVERALLS_TOKEN
+- make test
+- $HOME/gopath/bin/goveralls -service="travis-ci" -coverprofile=profile.cov -repotoken $COVERALLS_TOKEN
 matrix:
   allow_failures:
   - go: tip
 env:
   global:
-    secure: iw4gkKt+5WC9ttA+pRdKPZlyokFZZvXSU0BVNiiPgGAGe6F5Qc3dUL7k0sKaTrCpIVcVSmUyAykinO8AlJ1WQ39CPUfN7AbnarCtGpjKut6vdVxBoH1k2xIpYHGBXCUxKHu5XxlDogOwYAhtF9iBMy7Ddw1TVYX+uoS4qObpewY=
+    secure: "OajWOQGI7MPVBszEFY5PjmNp4oxbj88rjWkiG9XzV8s9ywgadIbk+qEvXq0wEz2o74ERLAlAN8TMGFHJjB7R/cL3BPNoS+TFpbrnWXO5fZc3K7Kt/kfIYle9XA+LHINVjzX3dLdhG2Mv53XFJZnUSdYFEpgFUezXyb+iZgtsUec="
