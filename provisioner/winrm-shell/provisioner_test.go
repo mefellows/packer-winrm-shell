@@ -247,3 +247,11 @@ func TestProvisionerQuote_EnvironmentVars(t *testing.T) {
 		t.Fatalf("%s should be equal to %s", p.config.Vars[3], expectedValue)
 	}
 }
+
+func TestProvisionerProvision_Inline(t *testing.T) {
+
+}
+
+func TestProvisionerProvision_Script(t *testing.T) {
+
+}

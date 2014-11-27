@@ -5,9 +5,10 @@ package winrmshell
 import (
 	"errors"
 	"fmt"
+	communicator "github.com/dylanmei/packer-communicator-winrm"
+	"github.com/masterzen/winrm/winrm"
 	"github.com/mitchellh/packer/common"
 	"github.com/mitchellh/packer/packer"
-	"github.com/sneal/go-winrm"
 	"log"
 	"os"
 	"strings"
@@ -224,27 +225,48 @@ func (p *Provisioner) Provision(ui packer.Ui, comm packer.Communicator) error {
 
 	// Create a WinRM Shell and start communicating
 	// with remote host
-	var client = winrm.NewClient(p.config.Hostname, p.config.Username, p.config.Password)
-	shell, err := client.CreateShell()
+	timeout := 60 * time.Second
+	endpoint := &winrm.Endpoint{p.config.Hostname, p.config.Port}
+	communicator, err := communicator.New(endpoint, p.config.Username, p.config.Password, timeout)
 	if err != nil {
+		log.Printf("Unable to run command: %s", err)
 		return err
 	}
 
-	var cmd *winrm.Command
-	cmd, err = shell.Execute(winrm.Powershell("Get-ExecutionPolicy"), os.Stdout, os.Stderr)
-	if err != nil {
-		return err
-	}
-	cmd, err = shell.Execute(winrm.Powershell("Write-Host 'hello from PS'"), os.Stdout, os.Stderr)
-	if err != nil {
-		return err
+	for _, command := range p.config.Inline {
+		log.Printf("Running inline command: %s", command)
+		//translatedCommand := fmt.Sprintf("%s \"%s\"", p.config.InlineShebang, command)
+		translatedCommand := command
+		rc := &packer.RemoteCmd{
+			Command: translatedCommand,
+			Stdout:  os.Stdout,
+			Stderr:  os.Stderr,
+		}
+
+		err = communicator.Start(rc)
+		if err != nil {
+			log.Printf("Unable to run command: %s", err)
+			return nil
+		}
+
+		rc.Wait()
+		log.Printf("Command completed with exit status %s", rc.ExitStatus)
 	}
 
-	cmd.Wait()
+	// err = shell.Execute(winrm.Powershell("Get-ExecutionPolicy"), os.Stdout, os.Stderr)
+	// if err != nil {
+	// 	return err
+	// }
+	// cmd, err = shell.Execute(winrm.Powershell("Write-Host 'hello from PS'"), os.Stdout, os.Stderr)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if cmd.ExitCode() != 0 {
-		fmt.Println("Command failed")
-	}
+	// cmd.Wait()
+
+	// if cmd.ExitCode() != 0 {
+	// 	fmt.Println("Command failed")
+	// }
 
 	// scripts := make([]string, len(p.config.Scripts))
 	// copy(scripts, p.config.Scripts)
