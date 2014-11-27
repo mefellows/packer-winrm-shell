@@ -15,7 +15,8 @@ import (
 	"time"
 )
 
-const DefaultRemotePath = "/tmp/script.sh"
+//const DefaultRemotePath = "c:\\Windows\\Temp\\script.ps1"
+const DefaultRemotePath = "c:/Windows/Temp/script.ps1"
 
 type config struct {
 	common.PackerConfig `mapstructure:",squash"`
@@ -96,7 +97,8 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 	errs := common.CheckUnusedConfig(md)
 
 	if p.config.ExecuteCommand == "" {
-		p.config.ExecuteCommand = "chmod +x {{.Path}}; {{.Vars}} {{.Path}}"
+		//p.config.ExecuteCommand = "chmod +x {{.Path}}; {{.Vars}} {{.Path}}"
+		p.config.ExecuteCommand = "{{.Path}}"
 	}
 
 	if p.config.Inline != nil && len(p.config.Inline) == 0 {
@@ -268,8 +270,8 @@ func (p *Provisioner) Provision(ui packer.Ui, comm packer.Communicator) error {
 	// 	fmt.Println("Command failed")
 	// }
 
-	// scripts := make([]string, len(p.config.Scripts))
-	// copy(scripts, p.config.Scripts)
+	scripts := make([]string, len(p.config.Scripts))
+	copy(scripts, p.config.Scripts)
 
 	// // If we have an inline script, then turn that into a temporary
 	// // shell script and use that.
@@ -299,78 +301,63 @@ func (p *Provisioner) Provision(ui packer.Ui, comm packer.Communicator) error {
 	// 	tf.Close()
 	// }
 
-	// // Build our variables up by adding in the build name and builder type
-	// envVars := make([]string, len(p.config.Vars)+2)
-	// envVars[0] = "PACKER_BUILD_NAME=" + p.config.PackerBuildName
-	// envVars[1] = "PACKER_BUILDER_TYPE=" + p.config.PackerBuilderType
-	// copy(envVars[2:], p.config.Vars)
+	// Build our variables up by adding in the build name and builder type
+	envVars := make([]string, len(p.config.Vars)+2)
+	envVars[0] = "PACKER_BUILD_NAME=" + p.config.PackerBuildName
+	envVars[1] = "PACKER_BUILDER_TYPE=" + p.config.PackerBuilderType
+	copy(envVars[2:], p.config.Vars)
 
-	// for _, path := range scripts {
-	// 	ui.Say(fmt.Sprintf("Provisioning with shell script: %s", path))
+	for _, path := range scripts {
+		ui.Say(fmt.Sprintf("Provisioning with shell script: %s", path))
 
-	// 	log.Printf("Opening %s for reading", path)
-	// 	f, err := os.Open(path)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Error opening shell script: %s", err)
-	// 	}
-	// 	defer f.Close()
+		log.Printf("Opening %s for reading", path)
+		f, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("Error opening shell script: %s", err)
+		}
+		defer f.Close()
 
-	// 	// Flatten the environment variables
-	// 	flattendVars := strings.Join(envVars, " ")
+		// Flatten the environment variables
+		flattendVars := strings.Join(envVars, " ")
 
-	// 	// Compile the command
-	// 	command, err := p.config.tpl.Process(p.config.ExecuteCommand, &ExecuteCommandTemplate{
-	// 		Vars: flattendVars,
-	// 		Path: p.config.RemotePath,
-	// 	})
-	// 	if err != nil {
-	// 		return fmt.Errorf("Error processing command: %s", err)
-	// 	}
+		// Compile the command
+		command, err := p.config.tpl.Process(p.config.ExecuteCommand, &ExecuteCommandTemplate{
+			Vars: flattendVars,
+			Path: p.config.RemotePath,
+		})
+		if err != nil {
+			return fmt.Errorf("Error processing command: %s", err)
+		}
 
-	// 	// Upload the file and run the command. Do this in the context of
-	// 	// a single retryable function so that we don't end up with
-	// 	// the case that the upload succeeded, a restart is initiated,
-	// 	// and then the command is executed but the file doesn't exist
-	// 	// any longer.
-	// 	var cmd *packer.RemoteCmd
-	// 	err = p.retryable(func() error {
-	// 		if _, err := f.Seek(0, 0); err != nil {
-	// 			return err
-	// 		}
+		// Upload the file and run the command. Do this in the context of
+		// a single retryable function so that we don't end up with
+		// the case that the upload succeeded, a restart is initiated,
+		// and then the command is executed but the file doesn't exist
+		// any longer.
+		var cmd *packer.RemoteCmd
+		err = p.retryable(func() error {
+			if _, err := f.Seek(0, 0); err != nil {
+				return err
+			}
 
-	// 		var r io.Reader = f
-	// 		if !p.config.Binary {
-	// 			r = &UnixReader{Reader: r}
-	// 		}
+			if err := communicator.Upload(p.config.RemotePath, f, nil); err != nil {
+				return fmt.Errorf("Error uploading script: %s", err)
+			}
 
-	// 		if err := comm.Upload(p.config.RemotePath, r, nil); err != nil {
-	// 			return fmt.Errorf("Error uploading script: %s", err)
-	// 		}
+			cmd = &packer.RemoteCmd{Command: command}
+			return cmd.StartWithUi(communicator, ui)
+		})
+		if err != nil {
+			return err
+		}
 
-	// 		cmd = &packer.RemoteCmd{
-	// 			Command: fmt.Sprintf("chmod 0777 %s", p.config.RemotePath),
-	// 		}
-	// 		if err := comm.Start(cmd); err != nil {
-	// 			return fmt.Errorf(
-	// 				"Error chmodding script file to 0777 in remote "+
-	// 					"machine: %s", err)
-	// 		}
-	// 		cmd.Wait()
+		// Close the original file since we copied it
+		f.Close()
 
-	// 		cmd = &packer.RemoteCmd{Command: command}
-	// 		return cmd.StartWithUi(comm, ui)
-	// 	})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	// Close the original file since we copied it
-	// 	f.Close()
-
-	// 	if cmd.ExitStatus != 0 {
-	// 		return fmt.Errorf("Script exited with non-zero exit status: %d", cmd.ExitStatus)
-	// 	}
-	// }
+		if cmd.ExitStatus != 0 {
+			return fmt.Errorf("Script exited with non-zero exit status: %d", cmd.ExitStatus)
+		}
+	}
 
 	return nil
 }
