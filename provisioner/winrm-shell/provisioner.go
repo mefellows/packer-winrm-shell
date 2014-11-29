@@ -5,8 +5,8 @@ package winrmshell
 import (
 	"errors"
 	"fmt"
+	communicator "github.com/dylanmei/packer-communicator-winrm/communicator/winrm"
 	"github.com/masterzen/winrm/winrm"
-	communicator "github.com/mefellows/packer-communicator-winrm/communicator/winrm"
 	"github.com/mitchellh/packer/common"
 	"github.com/mitchellh/packer/packer"
 	"log"
