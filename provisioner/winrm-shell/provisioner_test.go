@@ -1,6 +1,7 @@
 package winrmshell
 
 import (
+	"bytes"
 	"github.com/mitchellh/packer/packer"
 	"io/ioutil"
 	"os"
@@ -248,10 +249,49 @@ func TestProvisionerQuote_EnvironmentVars(t *testing.T) {
 	}
 }
 
+func testUi() *packer.BasicUi {
+	return &packer.BasicUi{
+		Reader:      new(bytes.Buffer),
+		Writer:      new(bytes.Buffer),
+		ErrorWriter: new(bytes.Buffer),
+	}
+}
+
+func testObjects() (packer.Ui, packer.Communicator) {
+	ui := testUi()
+	return ui, new(packer.MockCommunicator)
+}
+
 func TestProvisionerProvision_Inline(t *testing.T) {
+	config := testConfig()
+	delete(config, "inline")
+	config["scripts"] = []string{}
+	ui := testUi()
+
+	p := new(Provisioner)
+	comm := new(packer.MockCommunicator)
+	p.Prepare(config)
+	err := p.Provision(ui, comm)
+
+	// Should create a remote command from
+
+	if err != nil {
+		t.Fatal("should not have error")
+	}
 
 }
 
-func TestProvisionerProvision_Script(t *testing.T) {
+func TestProvisionerProvision_Scripts(t *testing.T) {
 
+	// Create n scripts
+
+	// Should execute them in order from 1-n
+
+	// Should invoke 'runcommand' / 'Start'
+}
+
+func TestProvisionerProvision_UISlurp(t *testing.T) {
+	// UI should be called n times
+
+	// UI should receive following messages / output
 }
